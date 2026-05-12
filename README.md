@@ -2,6 +2,14 @@
 
 A self-hosted monitoring dashboard for your homelab. Track service health, system resources (CPU, RAM, disk, temperature), and Docker containers across multiple machines — all in one place.
 
+## One-Liner Install
+
+```bash
+curl -sSL https://raw.githubusercontent.com/chasew28/homelab-monitor/main/setup.py | python3
+```
+
+This will install dependencies and launch an interactive terminal wizard to configure your nodes and services. After setup, run `python app.py` to start the monitor.
+
 ## Features
 
 - **Service health checks** — HTTP monitoring with latency tracking
@@ -40,7 +48,15 @@ A self-hosted monitoring dashboard for your homelab. Track service health, syste
 
 ## Quick Start
 
-### 1. Configure
+### 1. Run the setup wizard (recommended)
+
+```bash
+python setup.py
+```
+
+This interactively configures your nodes, services, and writes `config.yml` for you.
+
+### 2. Or configure manually
 
 Edit `config.yml` to define your nodes and services:
 
@@ -142,9 +158,11 @@ docker run -d \
 homelab-monitor/
 ├── app.py              # Main server (Flask)
 ├── agent.py            # Remote node agent
+├── setup.py            # Interactive setup wizard
 ├── config.yml          # Your configuration
 ├── requirements.txt    # Python dependencies
 ├── Dockerfile          # Container build
+├── docker-compose.yml  # Docker Compose
 ├── dashboard/
 │   └── index.html      # Frontend
 └── README.md
