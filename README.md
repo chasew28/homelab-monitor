@@ -5,13 +5,17 @@ A self-hosted monitoring dashboard for your homelab. Track service health, syste
 ## Quick Install
 
 ```bash
-# Install
-pip install git+https://github.com/chasew28/homelab-monitor.git
+bash <(curl -sSL https://raw.githubusercontent.com/chasew28/homelab-monitor/main/install.sh)
 
 # Create a project folder and set it up
 mkdir my-monitor && cd my-monitor
-hlm setup   # interactive config wizard
-hlm run     # start the dashboard on port 5001
+hlm setup     # interactive config wizard
+
+# Link remote nodes (Pi, NAS, etc.)
+hlm link admin@192.168.1.10 --docker
+
+# Start the dashboard
+hlm run       # → http://localhost:5001
 ```
 
 ## Commands
@@ -21,6 +25,7 @@ hlm run     # start the dashboard on port 5001
 | `hlm setup` | Interactive wizard to configure your nodes & services |
 | `hlm run` | Start the monitoring dashboard on port 5001 |
 | `hlm agent` | Start the remote agent (for secondary machines) |
+| `hlm link [user@]host` | Link a remote node via SSH (install agent + add to config) |
 
 ## Features
 
@@ -30,6 +35,17 @@ hlm run     # start the dashboard on port 5001
 - **Live auto-refresh** — Dashboard updates every 15 seconds
 - **Distributed architecture** — Central server + lightweight agents on remote nodes
 - **Fully configurable** — Define your nodes and services in `config.yml`
+
+## Linking Remote Nodes
+
+```bash
+# From the main server, link a remote Pi/NAS:
+hlm link admin@192.168.1.10 --name NAS
+hlm link 192.168.1.20 --docker    # default user: current $USER
+hlm link root@10.0.0.5 -p 2222 --agent-port 5200
+```
+
+This SSHes into the remote machine, installs the agent, starts it as a systemd service, and adds the node to your local `config.yml` — all in one command.
 
 ## Architecture
 
@@ -63,7 +79,7 @@ hlm run     # start the dashboard on port 5001
 ### 1. Run the setup wizard (recommended)
 
 ```bash
-python wizard.py
+hlm setup
 ```
 
 This interactively configures your nodes, services, and writes `config.yml` for you.
@@ -95,28 +111,17 @@ nodes:
         url: "http://192.168.1.10:3000"
 ```
 
-### 2. Install & Run (Main Server)
-
-```bash
-pip install -r requirements.txt
-python app.py
-# → http://localhost:5001
-```
-
 ### 3. Run Agents (Remote Nodes)
 
-On each additional machine:
+On each additional machine, install hlm the same way:
 
 ```bash
-# Install psutil if needed
-pip install psutil
-
-# Run the agent
-python agent.py
+bash <(curl -sSL https://raw.githubusercontent.com/chasew28/homelab-monitor/main/install.sh)
+hlm agent
 # → listens on port 5100
 ```
 
-Or run as a service:
+Or run as a systemd service:
 
 ```bash
 # systemd service file
