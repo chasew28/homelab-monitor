@@ -14,8 +14,22 @@ from flask_cors import CORS
 app = Flask(__name__, static_folder=None)
 CORS(app)
 
-CONFIG_PATH = Path(__file__).parent / "config.yml"
-DASHBOARD_DIR = Path(__file__).parent / "dashboard"
+HERE = Path(__file__).parent.resolve()
+
+def find_config():
+    config_dir = Path(os.environ.get("HLM_CONFIG_DIR", os.getcwd()))
+    candidates = [
+        config_dir / "config.yml",
+        HERE / "config.yml",
+        Path.home() / ".config" / "homelab-monitor" / "config.yml",
+    ]
+    for path in candidates:
+        if path.exists():
+            return path
+    return candidates[0]
+
+CONFIG_PATH = find_config()
+DASHBOARD_DIR = HERE / "dashboard"
 
 
 def load_config():

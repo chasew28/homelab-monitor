@@ -6,7 +6,7 @@ import shutil
 from pathlib import Path
 
 HERE = Path(__file__).parent.resolve()
-CONFIG_PATH = HERE / "config.yml"
+CONFIG_PATH = Path(os.environ.get("HLM_CONFIG_DIR", os.getcwd())) / "config.yml"
 
 C = {
     "reset": "\033[0m",
@@ -147,8 +147,6 @@ def main():
     boxed("Homelab Monitor — Setup")
     p(f"\n  {C['grey']}This will guide you through configuring your homelab.{C['reset']}")
     p(f"  {C['grey']}You can always edit {C['cyan']}config.yml{C['grey']} manually later.{C['reset']}\n")
-
-    install_deps()
 
     title = ask_title()
     nodes = collect_nodes()
