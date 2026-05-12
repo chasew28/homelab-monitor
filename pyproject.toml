@@ -1,0 +1,13 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.backends._legacy:_Backend"
+
+[project]
+name = "homelab-monitor"
+version = "1.0.0"
+description = "Self-hosted homelab monitoring dashboard"
+requires-python = ">=3.8"
+dependencies = []
+
+[project.scripts]
+hlm = "hlm_cli:main"
