@@ -6,23 +6,16 @@ A self-hosted monitoring dashboard for your homelab. Track service health, syste
 
 ```bash
 pip install git+https://github.com/chasew28/homelab-monitor.git
-hlm setup    # interactive config wizard
-hlm run      # start the dashboard
 ```
 
-Or without installing:
+Then configure and run:
 
 ```bash
-git clone https://github.com/chasew28/homelab-monitor.git
-cd homelab-monitor
-pip install -r requirements.txt
-python wizard.py   # config wizard
-python app.py      # start the dashboard
+hlm setup   # interactive config wizard
+hlm run     # start the dashboard on port 5001
 ```
 
 ## Commands
-
-Once installed (`pip install -e .` or `pip install` from git):
 
 | Command | What it does |
 |---------|-------------|
