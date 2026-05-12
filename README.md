@@ -5,12 +5,11 @@ A self-hosted monitoring dashboard for your homelab. Track service health, syste
 ## Quick Install
 
 ```bash
+# Install
 pip install git+https://github.com/chasew28/homelab-monitor.git
-```
 
-Then configure and run:
-
-```bash
+# Create a project folder and set it up
+mkdir my-monitor && cd my-monitor
 hlm setup   # interactive config wizard
 hlm run     # start the dashboard on port 5001
 ```
