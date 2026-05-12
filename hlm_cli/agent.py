@@ -48,7 +48,11 @@ class Handler(BaseHTTPRequestHandler):
         self.wfile.write(json.dumps(data).encode())
 
 
-if __name__ == "__main__":
+def main():
     port = int(os.environ.get("AGENT_PORT", 5100))
     print(f"Agent listening on 0.0.0.0:{port}")
     HTTPServer(("0.0.0.0", port), Handler).serve_forever()
+
+
+if __name__ == "__main__":
+    main()

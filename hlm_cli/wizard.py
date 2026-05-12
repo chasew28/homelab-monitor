@@ -163,7 +163,7 @@ def main():
         p(f"    • {n['name']}  {C['grey']}({n['host']}, {tag}, {n_services} service{'s' if n_services != 1 else ''}){C['reset']}")
 
     p(f"\n  {C['bold']}To start:{C['reset']}")
-    p(f"    python {C['cyan']}app.py{C['reset']}")
+    p(f"    {C['cyan']}hlm run{C['reset']}")
     p(f"\n  {C['dim']}Or run with Docker:{C['reset']}")
     p(f"    docker compose up{C['reset']}\n")
 
