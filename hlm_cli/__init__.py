@@ -10,7 +10,7 @@ def cmd_run():
 
 
 def cmd_setup():
-    subprocess.run([sys.executable, str(HERE / "setup.py")])
+    subprocess.run([sys.executable, str(HERE / "wizard.py")])
 
 
 def cmd_agent():

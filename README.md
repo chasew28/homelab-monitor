@@ -2,13 +2,33 @@
 
 A self-hosted monitoring dashboard for your homelab. Track service health, system resources (CPU, RAM, disk, temperature), and Docker containers across multiple machines — all in one place.
 
-## One-Liner Install
+## Quick Install
 
 ```bash
-curl -sSL https://raw.githubusercontent.com/chasew28/homelab-monitor/main/setup.py | python3
+pip install git+https://github.com/chasew28/homelab-monitor.git
+hlm setup    # interactive config wizard
+hlm run      # start the dashboard
 ```
 
-This will install dependencies and launch an interactive terminal wizard to configure your nodes and services. After setup, run `python app.py` to start the monitor.
+Or without installing:
+
+```bash
+git clone https://github.com/chasew28/homelab-monitor.git
+cd homelab-monitor
+pip install -r requirements.txt
+python wizard.py   # config wizard
+python app.py      # start the dashboard
+```
+
+## Commands
+
+Once installed (`pip install -e .` or `pip install` from git):
+
+| Command | What it does |
+|---------|-------------|
+| `hlm setup` | Interactive wizard to configure your nodes & services |
+| `hlm run` | Start the monitoring dashboard on port 5001 |
+| `hlm agent` | Start the remote agent (for secondary machines) |
 
 ## Features
 
@@ -51,7 +71,7 @@ This will install dependencies and launch an interactive terminal wizard to conf
 ### 1. Run the setup wizard (recommended)
 
 ```bash
-python setup.py
+python wizard.py
 ```
 
 This interactively configures your nodes, services, and writes `config.yml` for you.
@@ -156,11 +176,15 @@ docker run -d \
 
 ```
 homelab-monitor/
+├── hlm_cli/            # CLI package (provides `hlm` command)
+│   ├── __init__.py
+│   └── __main__.py
 ├── app.py              # Main server (Flask)
 ├── agent.py            # Remote node agent
-├── setup.py            # Interactive setup wizard
+├── wizard.py           # Interactive setup wizard
 ├── config.yml          # Your configuration
 ├── requirements.txt    # Python dependencies
+├── pyproject.toml      # Package config (hlm CLI entry point)
 ├── Dockerfile          # Container build
 ├── docker-compose.yml  # Docker Compose
 ├── dashboard/
