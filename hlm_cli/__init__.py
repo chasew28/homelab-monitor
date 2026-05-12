@@ -9,8 +9,7 @@ HERE = Path(__file__).resolve().parent
 def cmd_run():
     env = os.environ.copy()
     env["HLM_CONFIG_DIR"] = os.getcwd()
-    server_path = HERE.parent / "app.py"
-    subprocess.run([sys.executable, str(server_path)], env=env)
+    subprocess.run([sys.executable, str(HERE / "server.py")], env=env)
 
 
 def cmd_setup():
@@ -18,7 +17,7 @@ def cmd_setup():
 
 
 def cmd_agent():
-    subprocess.run([sys.executable, str(HERE.parent / "agent.py")])
+    subprocess.run([sys.executable, str(HERE / "agent.py")])
 
 
 def main():

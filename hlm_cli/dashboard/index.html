@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title id="pageTitle">Homelab Monitor</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'JetBrains Mono', 'Courier New', monospace;
+      line-height: 1.6;
+      color: #e0e0e0;
+      background: #000;
+    }
+    .container { max-width: 1100px; margin: 0 auto; padding: 2rem; }
+    header {
+      text-align: center;
+      padding: 3rem 1rem 2rem;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      margin-bottom: 2rem;
+    }
+    header h1 { font-size: 2rem; margin-bottom: 0.5rem; }
+    header p { color: #999; font-size: 0.9rem; }
+    .dashboard-header {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 2rem;
+    }
+    .last-updated { color: #666; font-size: 0.85rem; }
+    .refresh-btn {
+      background: rgba(108,99,255,0.1); border: 1px solid rgba(108,99,255,0.2);
+      color: #6C63FF; padding: 0.5rem 1rem; border-radius: 8px;
+      cursor: pointer; font-family: inherit; font-size: 0.85rem;
+    }
+    .refresh-btn:hover { background: rgba(108,99,255,0.2); }
+    .section-title {
+      font-size: 1.1rem; margin-bottom: 1rem; color: #ccc;
+      border-bottom: 1px solid rgba(255,255,255,0.06); padding-bottom: 0.5rem;
+    }
+    .cards {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 1rem; margin-bottom: 2.5rem;
+    }
+    .card {
+      background: linear-gradient(135deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01));
+      border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; padding: 1.25rem;
+    }
+    .card-header {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 0.75rem;
+    }
+    .card-name { font-weight: 600; font-size: 0.95rem; }
+    .status-indicator { display: flex; align-items: center; gap: 0.4rem; font-size: 0.8rem; }
+    .dot {
+      width: 10px; height: 10px; border-radius: 50%;
+    }
+    .dot.up { background: #4CAF50; box-shadow: 0 0 8px rgba(76,175,80,0.4); }
+    .dot.degraded { background: #FF9800; box-shadow: 0 0 8px rgba(255,152,0,0.4); }
+    .dot.down { background: #f44336; box-shadow: 0 0 8px rgba(244,67,54,0.4); }
+    .card-url { color: #666; font-size: 0.75rem; word-break: break-all; }
+    .card-latency { color: #888; font-size: 0.8rem; margin-top: 0.25rem; }
+    .host-badge {
+      display: inline-block; background: rgba(255,255,255,0.04);
+      padding: 0.15rem 0.5rem; border-radius: 6px; font-size: 0.7rem;
+      color: #777; border: 1px solid rgba(255,255,255,0.06); margin-top: 0.5rem;
+    }
+    .system-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 1rem; margin-bottom: 2.5rem;
+    }
+    .gauge {
+      background: linear-gradient(135deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01));
+      border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; padding: 1.25rem;
+    }
+    .gauge-label { font-size: 0.85rem; color: #999; margin-bottom: 0.5rem; }
+    .gauge-value { font-size: 1.5rem; font-weight: 700; margin-bottom: 0.5rem; }
+    .gauge-bar {
+      height: 6px; background: rgba(255,255,255,0.06); border-radius: 3px; overflow: hidden;
+    }
+    .gauge-bar-fill {
+      height: 100%; border-radius: 3px; transition: width 0.5s ease;
+    }
+    .gauge-bar-fill.low { background: #4CAF50; }
+    .gauge-bar-fill.med { background: #FF9800; }
+    .gauge-bar-fill.high { background: #f44336; }
+    .gauge-detail { font-size: 0.75rem; color: #666; margin-top: 0.35rem; }
+    .node-section { margin-bottom: 2rem; }
+    .node-header { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem; }
+    .node-name { font-size: 1.1rem; font-weight: 600; color: #ccc; }
+    .node-hostname { font-size: 0.8rem; color: #666; }
+    .docker-table {
+      width: 100%; border-collapse: collapse; margin-bottom: 2.5rem;
+    }
+    .docker-table th {
+      text-align: left; padding: 0.75rem 1rem; font-size: 0.8rem;
+      color: #888; border-bottom: 1px solid rgba(255,255,255,0.06);
+      text-transform: uppercase; letter-spacing: 0.05em;
+    }
+    .docker-table td {
+      padding: 0.75rem 1rem; font-size: 0.85rem;
+      color: #aaa; border-bottom: 1px solid rgba(255,255,255,0.03);
+    }
+    .docker-table tr:hover td { background: rgba(255,255,255,0.02); }
+    .container-status { display: inline-flex; align-items: center; gap: 0.4rem; }
+    .cdot { width: 8px; height: 8px; border-radius: 50%; }
+    .cdot.running { background: #4CAF50; }
+    .cdot.exited { background: #f44336; }
+    .cdot.paused { background: #FF9800; }
+    .error-state { color: #f44336; padding: 2rem; text-align: center; }
+    footer {
+      text-align: center; padding: 2rem; border-top: 1px solid #222;
+      color: #666; font-size: 0.875rem;
+    }
+    @media (max-width: 768px) {
+      header h1 { font-size: 1.5rem; }
+      .cards { grid-template-columns: 1fr; }
+      .system-grid { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1 id="title">Homelab Monitor</h1>
+      <p>Real-time status of services and system resources</p>
+    </header>
+
+    <div class="dashboard-header">
+      <span class="last-updated" id="lastUpdated">Loading...</span>
+      <button class="refresh-btn" id="refreshBtn">Refresh Now</button>
+    </div>
+
+    <h2 class="section-title">Services</h2>
+    <div class="cards" id="servicesCards">
+      <div class="card"><p style="color:#666">Loading services...</p></div>
+    </div>
+
+    <h2 class="section-title">System Resources</h2>
+    <div id="systemGrid"></div>
+
+    <h2 class="section-title" id="dockerTitle" style="display:none">Docker Containers</h2>
+    <div id="dockerSection"></div>
+  </div>
+
+  <footer>
+    <p>Homelab Monitor</p>
+  </footer>
+
+  <script>
+    const API_BASE = '/api';
+
+    async function fetchJSON(endpoint) {
+      const res = await fetch(`${API_BASE}${endpoint}`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return res.json();
+    }
+
+    function updateTime() {
+      document.getElementById('lastUpdated').textContent =
+        `Last updated: ${new Date().toLocaleTimeString()}`;
+    }
+
+    function dot(status) {
+      return `<span class="dot ${status}"></span>`;
+    }
+
+    function renderServices(data) {
+      const container = document.getElementById('servicesCards');
+      if (!data || data.length === 0) {
+        container.innerHTML = '<div class="card"><p style="color:#666">No services configured</p></div>';
+        return;
+      }
+      container.innerHTML = data.map(s => `
+        <div class="card">
+          <div class="card-header">
+            <span class="card-name">${s.name}</span>
+            <span class="status-indicator">${dot(s.status)} ${s.status}</span>
+          </div>
+          <div class="card-url">${s.url}</div>
+          ${s.latency_ms !== null ? `<div class="card-latency">${s.latency_ms}ms</div>` : ''}
+          <div class="host-badge">${s.host}</div>
+        </div>
+      `).join('');
+    }
+
+    function renderSystem(nodes) {
+      const grid = document.getElementById('systemGrid');
+      grid.innerHTML = '';
+
+      function barClass(pct) { return pct < 60 ? 'low' : pct < 85 ? 'med' : 'high'; }
+      function fmtBytes(b) {
+        if (!b) return '0 B';
+        const u = ['B','KB','MB','GB','TB']; let i = 0; let v = b;
+        while (v >= 1024 && i < u.length - 1) { v /= 1024; i++; }
+        return `${v.toFixed(1)} ${u[i]}`;
+      }
+      function fmtUptime(s) {
+        return `${Math.floor(s/86400)}d ${Math.floor((s%86400)/3600)}h ${Math.floor((s%3600)/60)}m`;
+      }
+
+      for (const [name, data] of Object.entries(nodes)) {
+        if (data.error) {
+          grid.innerHTML += `<div class="node-section"><div class="gauge error-state">${name}: ${data.error}</div></div>`;
+          continue;
+        }
+        const temp = data.cpu_temp !== null ? `${data.cpu_temp}°C` : 'N/A';
+        grid.innerHTML += `
+          <div class="node-section">
+            <div class="node-header">
+              <span class="node-name">${name}</span>
+              <span class="node-hostname">${data.hostname}</span>
+            </div>
+            <div class="system-grid">
+              <div class="gauge">
+                <div class="gauge-label">CPU</div>
+                <div class="gauge-value">${data.cpu_percent}%</div>
+                <div class="gauge-bar"><div class="gauge-bar-fill ${barClass(data.cpu_percent)}" style="width:${data.cpu_percent}%"></div></div>
+                <div class="gauge-detail">Temp: ${temp}</div>
+              </div>
+              <div class="gauge">
+                <div class="gauge-label">RAM</div>
+                <div class="gauge-value">${data.ram_percent}%</div>
+                <div class="gauge-bar"><div class="gauge-bar-fill ${barClass(data.ram_percent)}" style="width:${data.ram_percent}%"></div></div>
+                <div class="gauge-detail">${fmtBytes(data.ram_used)} / ${fmtBytes(data.ram_total)}</div>
+              </div>
+              <div class="gauge">
+                <div class="gauge-label">Disk</div>
+                <div class="gauge-value">${data.disk_percent}%</div>
+                <div class="gauge-bar"><div class="gauge-bar-fill ${barClass(data.disk_percent)}" style="width:${data.disk_percent}%"></div></div>
+                <div class="gauge-detail">${fmtBytes(data.disk_used)} / ${fmtBytes(data.disk_total)}</div>
+              </div>
+              <div class="gauge">
+                <div class="gauge-label">Uptime</div>
+                <div class="gauge-value" style="font-size:1.2rem">${fmtUptime(data.uptime_seconds)}</div>
+                <div class="gauge-detail">Host: ${data.hostname}</div>
+              </div>
+            </div>
+          </div>
+        `;
+      }
+    }
+
+    function renderDocker(data) {
+      const section = document.getElementById('dockerSection');
+      const title = document.getElementById('dockerTitle');
+      const hasAny = Object.values(data).some(v => Array.isArray(v) && v.length > 0
+        || (v.error && !Array.isArray(v)));
+
+      if (!hasAny) {
+        title.style.display = 'none';
+        section.innerHTML = '';
+        return;
+      }
+      title.style.display = 'block';
+
+      let html = '';
+      for (const [node, containers] of Object.entries(data)) {
+        if (containers.error) {
+          html += `<p class="error-state">${node}: ${containers.error}</p>`;
+          continue;
+        }
+        if (!containers || containers.length === 0) continue;
+        const sc = s => s === 'running' ? 'running' : s === 'exited' ? 'exited' : 'paused';
+        html += `
+          <p style="color:#999;font-size:0.85rem;margin-bottom:0.5rem">${node}</p>
+          <table class="docker-table">
+            <thead><tr><th>Name</th><th>Image</th><th>Status</th><th>Ports</th></tr></thead>
+            <tbody>
+              ${containers.map(c => `
+                <tr>
+                  <td><span class="container-status"><span class="cdot ${sc(c.state)}"></span> ${c.name}</span></td>
+                  <td>${c.image}</td>
+                  <td>${c.status}</td>
+                  <td>${c.ports || '—'}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        `;
+      }
+      section.innerHTML = html;
+    }
+
+    async function refreshAll() {
+      try {
+        const [config, services, system, docker] = await Promise.all([
+          fetchJSON('/config'),
+          fetchJSON('/services'),
+          fetchJSON('/system'),
+          fetchJSON('/docker'),
+        ]);
+        if (config && config.title) {
+          document.getElementById('title').textContent = config.title;
+          document.title = config.title;
+        }
+        renderServices(services);
+        renderSystem(system);
+        renderDocker(docker);
+        updateTime();
+      } catch (err) {
+        document.getElementById('servicesCards').innerHTML =
+          `<div class="card error-state">Failed to connect: ${err.message}</div>`;
+      }
+    }
+
+    document.getElementById('refreshBtn').addEventListener('click', refreshAll);
+    refreshAll();
+    setInterval(refreshAll, 15000);
+  </script>
+</body>
+</html>
