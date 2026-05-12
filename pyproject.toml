@@ -19,3 +19,6 @@ hlm = "hlm_cli:main"
 
 [tool.setuptools.packages.find]
 include = ["hlm_cli*"]
+ 
+[tool.setuptools.package-data]
+hlm_cli = ["dashboard/*", "dashboard/**/*"]
