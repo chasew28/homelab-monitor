@@ -38,6 +38,7 @@ hlm run       # → http://localhost:5001
 | `hlm run` | Start the monitoring dashboard on port 5001 |
 | `hlm agent` | Start the remote agent (for secondary machines) |
 | `hlm link [user@]host` | Link a remote node via SSH (install agent + add to config) |
+| `hlm update` | Check for updates and upgrade to the latest version |
 
 ## Features
 
@@ -125,7 +126,7 @@ nodes:
 
 ### 3. Run Agents (Remote Nodes)
 
-On each additional machine, install hlm the same way:
+On each additional machine, install hlm the same way and run:
 
 ```bash
 # Linux / macOS
@@ -141,32 +142,13 @@ hlm agent
 
 Listens on port 5100 by default.
 
-Or run as a systemd service:
+### 4. Docker (Optional)
 
 ```bash
-# systemd service file
-sudo cat > /etc/systemd/system/homelab-agent.service << 'EOF'
-[Unit]
-Description=Homelab Monitor Agent
-After=network.target
-
-[Service]
-Type=simple
-User=pi
-WorkingDirectory=/opt/homelab-agent
-ExecStart=/usr/bin/python3 /opt/homelab-agent/agent.py
-Restart=always
-RestartSec=5
-
-[Install]
-WantedBy=multi-user.target
-EOF
-
-sudo systemctl daemon-reload
-sudo systemctl enable --now homelab-agent
+docker compose up -d
 ```
 
-### 4. Docker (Optional)
+Or build and run manually:
 
 ```bash
 docker build -t homelab-monitor .
@@ -188,23 +170,28 @@ docker run -d \
 | `GET /api/services` | Service health status |
 | `GET /api/system` | System stats per node |
 | `GET /api/docker` | Docker container status per node |
+| `GET /api/update` | Check for available updates |
 
 ## Project Structure
 
 ```
 homelab-monitor/
-├── hlm_cli/            # CLI package (provides `hlm` command)
-│   ├── __init__.py
-│   └── __main__.py
-├── app.py              # Main server (Flask)
-├── agent.py            # Remote node agent
-├── wizard.py           # Interactive setup wizard
-├── config.yml          # Your configuration
-├── requirements.txt    # Python dependencies
-├── pyproject.toml      # Package config (hlm CLI entry point)
-├── Dockerfile          # Container build
-├── docker-compose.yml  # Docker Compose
+├── hlm_cli/                 # CLI package (provides `hlm` command)
+│   ├── __init__.py          # CLI dispatcher + `hlm link` logic
+│   ├── __main__.py          # allows `python -m hlm_cli`
+│   ├── server.py            # Flask dashboard backend
+│   ├── agent.py             # Remote node HTTP agent
+│   ├── wizard.py            # Interactive setup wizard
+│   ├── integrations.py      # Service integrations (AdGuard, Pi-hole, etc.)
+│   └── updater.py           # Version check and self-update
 ├── dashboard/
-│   └── index.html      # Frontend
+│   └── index.html           # Single-page dashboard frontend
+├── config.yml               # Your configuration
+├── pyproject.toml            # Package config (hlm CLI entry point)
+├── requirements.txt          # Python dependencies
+├── Dockerfile                # Container build
+├── docker-compose.yml        # Docker Compose
+├── install.sh                # Linux/macOS installer
+├── install.ps1               # Windows installer
 └── README.md
 ```

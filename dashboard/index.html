@@ -162,10 +162,33 @@
     .settings-service .s-svc-url { flex: 2; }
     .settings-services { margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid rgba(255,255,255,0.04); }
     .settings-services label { display: block; margin-bottom: 0.4rem; }
+    .service-logo { display: inline-flex; vertical-align: middle; margin-right: 0.4rem; }
+    .service-logo svg { display: block; }
+    .service-stats { margin: 0.5rem 0 0.25rem; padding-top: 0.5rem; border-top: 1px solid rgba(255,255,255,0.04); }
+    .stat-row { display: flex; align-items: center; gap: 0.5rem; font-size: 0.8rem; padding: 0.15rem 0; }
+    .stat-label { color: #888; min-width: 5rem; }
+    .stat-value { color: #e0e0e0; font-weight: 600; }
+    .stat-pct { color: #FF9800; font-size: 0.75rem; }
+    .auth-hint { color: #FF9800; font-size: 0.75rem; margin-top: 0.35rem; font-style: italic; }
+    .settings-auth { margin-top: 0.5rem; padding: 0.5rem; background: rgba(255,255,255,0.02); border-radius: 8px; }
+    .settings-auth summary { cursor: pointer; font-size: 0.8rem; color: #888; }
+    .settings-auth summary:hover { color: #ccc; }
+    .settings-auth .settings-field { margin-bottom: 0.4rem; }
+    .settings-auth .settings-field label { font-size: 0.75rem; }
+    .settings-auth select { width: 100%; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 0.4rem 0.6rem; color: #e0e0e0; font-family: inherit; font-size: 0.8rem; outline: none; }
     footer {
       text-align: center; padding: 2rem; border-top: 1px solid #222;
       color: #666; font-size: 0.875rem;
     }
+    .update-banner {
+      background: rgba(76,175,80,0.1); border: 1px solid rgba(76,175,80,0.2);
+      border-radius: 10px; padding: 0.6rem 1rem; margin-bottom: 1.5rem;
+      display: none; justify-content: space-between; align-items: center;
+      font-size: 0.85rem;
+    }
+    .update-banner.show { display: flex; }
+    .update-banner a { color: #4CAF50; text-decoration: none; font-weight: 600; }
+    .update-banner a:hover { text-decoration: underline; }
     @media (max-width: 768px) {
       header h1 { font-size: 1.5rem; }
       .cards { grid-template-columns: 1fr; }
@@ -186,6 +209,11 @@
         <button class="refresh-btn" id="settingsBtn">⚙ Settings</button>
         <button class="refresh-btn" id="refreshBtn">Refresh Now</button>
       </div>
+    </div>
+
+    <div id="updateBanner" class="update-banner">
+      <span>🚀 <span id="updateMsg">Update available</span></span>
+      <a href="#" onclick="event.preventDefault(); window.open('https://github.com/chasew28/homelab-monitor/releases', '_blank')">View Release</a>
     </div>
 
     <h2 class="section-title">Services</h2>
@@ -236,23 +264,47 @@
       return `<span class="dot ${status}"></span>`;
     }
 
+    const LOGOS = {
+      adguard: '<svg viewBox="0 0 40 40" width="28" height="28"><rect width="40" height="40" rx="8" fill="#4CAF50"/><text x="20" y="26" text-anchor="middle" fill="#fff" font-size="16" font-family="sans-serif" font-weight="bold">AG</text></svg>',
+      pihole: '<svg viewBox="0 0 40 40" width="28" height="28"><rect width="40" height="40" rx="8" fill="#2196F3"/><text x="20" y="26" text-anchor="middle" fill="#fff" font-size="16" font-family="sans-serif" font-weight="bold">PH</text></svg>',
+    };
+
+    function fmtNum(n) {
+      if (n === undefined || n === null) return '';
+      return n.toLocaleString();
+    }
+
     function renderServices(data) {
       const container = document.getElementById('servicesCards');
       if (!data || data.length === 0) {
         container.innerHTML = '<div class="card"><p style="color:#666">No services configured</p></div>';
         return;
       }
-      container.innerHTML = data.map(s => `
-        <div class="card">
-          <div class="card-header">
-            <span class="card-name">${s.name}</span>
-            <span class="status-indicator">${dot(s.status)} ${s.status}</span>
+      container.innerHTML = data.map(s => {
+        const logoHtml = s.type && LOGOS[s.type] ? `<span class="service-logo">${LOGOS[s.type]}</span>` : '';
+        const label = s.service_name || s.name;
+        let statsHtml = '';
+        if (s.authError) {
+          statsHtml = '<div class="auth-hint">Auth required — add credentials in Settings</div>';
+        } else if (s.stats) {
+          const rows = [];
+          if (s.stats.queries !== undefined) rows.push(`<div class="stat-row"><span class="stat-label">Queries</span><span class="stat-value">${fmtNum(s.stats.queries)}</span></div>`);
+          if (s.stats.blocked !== undefined) rows.push(`<div class="stat-row"><span class="stat-label">Blocked</span><span class="stat-value">${fmtNum(s.stats.blocked)}</span>${s.stats.blockedPercent !== undefined ? `<span class="stat-pct">(${s.stats.blockedPercent}%)</span>` : ''}</div>`);
+          if (rows.length) statsHtml = `<div class="service-stats">${rows.join('')}</div>`;
+        }
+        return `
+          <div class="card">
+            <div class="card-header">
+              <span class="card-name">${logoHtml}${label}</span>
+              <span class="status-indicator">${dot(s.status)} ${s.status}</span>
+            </div>
+            <div class="card-url">${s.url}</div>
+            ${s.latency_ms !== null ? `<div class="card-latency">${s.latency_ms}ms</div>` : ''}
+            ${statsHtml}
+            <div class="host-badge">${s.host}</div>
           </div>
-          <div class="card-url">${s.url}</div>
-          ${s.latency_ms !== null ? `<div class="card-latency">${s.latency_ms}ms</div>` : ''}
-          <div class="host-badge">${s.host}</div>
-        </div>
-      `).join('');
+        `;
+      }).join('');
     }
 
     function renderSystem(nodes) {
@@ -350,15 +402,23 @@
 
     async function refreshAll() {
       try {
-        const [config, services, system, docker] = await Promise.all([
+        const [config, services, system, docker, update] = await Promise.all([
           fetchJSON('/config'),
           fetchJSON('/services'),
           fetchJSON('/system'),
           fetchJSON('/docker'),
+          fetchJSON('/update'),
         ]);
         if (config && config.title) {
           document.getElementById('title').textContent = config.title;
           document.title = config.title;
+        }
+        const banner = document.getElementById('updateBanner');
+        if (update && update.available) {
+          document.getElementById('updateMsg').textContent = `Update v${update.latest} available (currently v${update.current})`;
+          banner.classList.add('show');
+        } else {
+          banner.classList.remove('show');
         }
         renderServices(services);
         renderSystem(system);
@@ -397,6 +457,16 @@
       body.innerHTML = html;
     }
 
+    function toggleAuth(select) {
+      const svc = select.closest('.settings-service');
+      const val = select.value;
+      const fields = svc.querySelector('.auth-fields');
+      if (!fields) return;
+      fields.querySelector('.s-auth-user').style.display = val === 'basic' ? '' : 'none';
+      fields.querySelector('.s-auth-pass').style.display = val === 'basic' ? '' : 'none';
+      fields.querySelector('.s-auth-token').style.display = val === 'token' ? '' : 'none';
+    }
+
     function renderNode(node, idx) {
       return `
         <div class="settings-node" data-idx="${idx}">
@@ -423,9 +493,24 @@
             <label>Services</label>
             ${(node.services || []).map((svc, j) => `
               <div class="settings-service">
-                <input type="text" class="settings-input s-svc-name" value="${esc(svc.name || '')}" placeholder="Name" />
-                <input type="text" class="settings-input s-svc-url" value="${esc(svc.url || '')}" placeholder="http://..." />
-                <button class="settings-remove" onclick="removeService(this)" title="Remove">✕</button>
+                <div style="display:flex;gap:0.5rem;align-items:center;margin-bottom:0.25rem">
+                  <input type="text" class="settings-input s-svc-name" value="${esc(svc.name || '')}" placeholder="Name" style="flex:1" />
+                  <input type="text" class="settings-input s-svc-url" value="${esc(svc.url || '')}" placeholder="http://..." style="flex:2" />
+                  <button class="settings-remove" onclick="removeService(this)" title="Remove">✕</button>
+                </div>
+                <details class="settings-auth" ${svc.auth ? 'open' : ''}>
+                  <summary>Authentication</summary>
+                  <select class="s-auth-type" onchange="toggleAuth(this)">
+                    <option value="">None</option>
+                    <option value="basic" ${svc.auth?.type === 'basic' ? 'selected' : ''}>Basic (username + password)</option>
+                    <option value="token" ${svc.auth?.type === 'token' ? 'selected' : ''}>Token / API Key</option>
+                  </select>
+                  <div class="auth-fields" style="margin-top:0.35rem">
+                    <input type="text" class="settings-input s-auth-user" placeholder="Username" style="display:${svc.auth?.type === 'basic' ? '' : 'none'};margin-bottom:0.25rem" value="${esc(svc.auth?.username || '')}" />
+                    <input type="password" class="settings-input s-auth-pass" placeholder="Password" style="display:${svc.auth?.type === 'basic' ? '' : 'none'};margin-bottom:0.25rem" value="${esc(svc.auth?.password || '')}" />
+                    <input type="text" class="settings-input s-auth-token" placeholder="Token / API key" style="display:${svc.auth?.type === 'token' ? '' : 'none'}" value="${esc(svc.auth?.token || '')}" />
+                  </div>
+                </details>
               </div>
             `).join('')}
             <button class="refresh-btn" onclick="addService(this)" style="font-size:0.8rem;padding:0.3rem 0.6rem;margin-top:0.3rem">+ Add Service</button>
@@ -454,9 +539,24 @@
       const div = document.createElement('div');
       div.innerHTML = `
         <div class="settings-service">
-          <input type="text" class="settings-input s-svc-name" value="" placeholder="Name" />
-          <input type="text" class="settings-input s-svc-url" value="" placeholder="http://..." />
-          <button class="settings-remove" onclick="removeService(this)" title="Remove">✕</button>
+          <div style="display:flex;gap:0.5rem;align-items:center;margin-bottom:0.25rem">
+            <input type="text" class="settings-input s-svc-name" value="" placeholder="Name" style="flex:1" />
+            <input type="text" class="settings-input s-svc-url" value="" placeholder="http://..." style="flex:2" />
+            <button class="settings-remove" onclick="removeService(this)" title="Remove">✕</button>
+          </div>
+          <details class="settings-auth">
+            <summary>Authentication</summary>
+            <select class="s-auth-type" onchange="toggleAuth(this)">
+              <option value="">None</option>
+              <option value="basic">Basic (username + password)</option>
+              <option value="token">Token / API Key</option>
+            </select>
+            <div class="auth-fields" style="margin-top:0.35rem">
+              <input type="text" class="settings-input s-auth-user" placeholder="Username" style="display:none;margin-bottom:0.25rem" />
+              <input type="password" class="settings-input s-auth-pass" placeholder="Password" style="display:none;margin-bottom:0.25rem" />
+              <input type="text" class="settings-input s-auth-token" placeholder="Token / API key" style="display:none" />
+            </div>
+          </details>
         </div>
       `;
       container.insertBefore(div.firstElementChild, btn);
@@ -476,7 +576,20 @@
         el.querySelectorAll('.settings-service').forEach(svcEl => {
           const n = svcEl.querySelector('.s-svc-name').value;
           const u = svcEl.querySelector('.s-svc-url').value;
-          if (n || u) node.services.push({name: n, url: u});
+          if (n || u) {
+            const svc = {name: n, url: u};
+            const authType = svcEl.querySelector('.s-auth-type')?.value;
+            if (authType) {
+              svc.auth = {type: authType};
+              if (authType === 'basic') {
+                svc.auth.username = svcEl.querySelector('.s-auth-user').value;
+                svc.auth.password = svcEl.querySelector('.s-auth-pass').value;
+              } else if (authType === 'token') {
+                svc.auth.token = svcEl.querySelector('.s-auth-token').value;
+              }
+            }
+            node.services.push(svc);
+          }
         });
         cfg.nodes.push(node);
       });

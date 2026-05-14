@@ -6,6 +6,8 @@ from pathlib import Path
 
 import yaml
 
+from hlm_cli.updater import get_current_version, check_for_update, perform_update
+
 HERE = Path(__file__).resolve().parent
 
 
@@ -192,12 +194,36 @@ def cmd_link():
         print(f"        services: {{}}")
 
 
+def cmd_update():
+    state = check_for_update(force=True)
+    if state.get("available"):
+        print(f"  Update available: {state['current']} → {state['latest']}")
+        resp = input("  Install now? [Y/n] ").strip().lower()
+        if resp and resp != "y":
+            print("  Cancelled.")
+            sys.exit(0)
+    else:
+        print(f"  Already up-to-date (v{state.get('current', '?')})")
+        resp = input("  Reinstall anyway? [y/N] ").strip().lower()
+        if resp != "y":
+            sys.exit(0)
+
+    print(f"  Updating...")
+    ok, result = perform_update()
+    if ok:
+        print(f"  ✓ Updated to v{result}")
+    else:
+        print(f"  ✗ Update failed:\n{result}")
+        sys.exit(1)
+
+
 def main():
     cmds = {
         "run": (cmd_run, "Start the monitoring dashboard"),
         "setup": (cmd_setup, "Interactive configuration wizard"),
         "agent": (cmd_agent, "Start remote agent for secondary machines"),
         "link": (cmd_link, "Link a remote node via SSH (install + configure agent)"),
+        "update": (cmd_update, "Check for updates and upgrade"),
     }
 
     if len(sys.argv) < 2 or sys.argv[1] not in cmds:

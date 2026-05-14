@@ -11,6 +11,9 @@ import yaml
 from flask import Flask, jsonify, request, send_from_directory
 from flask_cors import CORS
 
+from hlm_cli.integrations import INTEGRATIONS
+from hlm_cli.updater import check_for_update
+
 app = Flask(__name__, static_folder=None)
 CORS(app)
 
@@ -32,7 +35,7 @@ CONFIG_PATH = find_config()
 DASHBOARD_DIR = HERE / "dashboard"
 
 _NODE_KEYS = ["name", "host", "agent_port", "docker", "services"]
-_SVC_KEYS = ["name", "url"]
+_SVC_KEYS = ["name", "url", "auth"]
 
 
 def _order_cfg(data):
@@ -132,6 +135,17 @@ def fetch_agent_system_info(host, port):
         return {"error": str(e)}
 
 
+def enrich_service(url, auth=None):
+    for integration in INTEGRATIONS:
+        try:
+            result = integration.fetch(url, auth)
+            if result:
+                return result
+        except Exception:
+            continue
+    return None
+
+
 @app.route("/api/services")
 def services():
     cfg = load_config()
@@ -139,13 +153,20 @@ def services():
     for node in cfg.get("nodes", []):
         for svc in node.get("services", []):
             status, latency = check_service(svc["url"])
-            results.append({
+            entry = {
                 "name": svc["name"],
                 "url": svc["url"],
                 "status": status,
                 "latency_ms": latency,
                 "host": node["name"],
-            })
+            }
+            enrichment = enrich_service(svc["url"], svc.get("auth"))
+            if enrichment:
+                entry["type"] = enrichment["type"]
+                entry["service_name"] = enrichment["name"]
+                entry["stats"] = enrichment.get("stats")
+                entry["authError"] = enrichment.get("authError", False)
+            results.append(entry)
     return jsonify(results)
 
 
@@ -195,7 +216,10 @@ def config_info():
     return jsonify(cfg)
 
 
-@app.route("/api/health")
+@app.route("/api/update")
+def update_check():
+    state = check_for_update()
+    return jsonify(state)
 def health():
     return jsonify({"status": "ok", "timestamp": datetime.now(timezone.utc).isoformat()})
 
@@ -211,5 +235,9 @@ def dashboard(path="index.html"):
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5001))
+    state = check_for_update()
+    if state.get("available"):
+        print(f"  Update available: v{state['current']} → v{state['latest']}")
+        print(f"  Run 'hlm update' to upgrade\n")
     print(f"Homelab Monitor starting on http://0.0.0.0:{port}")
     app.run(host="0.0.0.0", port=port)
