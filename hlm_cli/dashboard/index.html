@@ -4,227 +4,615 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title id="pageTitle">Homelab Monitor</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <style>
+    :root {
+      --bg: #0c0c0e;
+      --surface: rgba(255,255,255,0.04);
+      --border: rgba(255,255,255,0.1);
+      --border-hover: rgba(255,255,255,0.18);
+      --text: #ececec;
+      --text-secondary: #bcbcbc;
+      --text-muted: #959595;
+      --accent: #818cf8;
+      --success: #4ade80;
+      --success-bg: rgba(74,222,128,0.12);
+      --warning: #fbbf24;
+      --warning-bg: rgba(251,191,36,0.12);
+      --error: #f87171;
+      --error-bg: rgba(248,113,113,0.12);
+      --radius: 12px;
+      --radius-lg: 16px;
+      --shadow: 0 2px 16px rgba(0,0,0,0.4);
+    }
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
-      font-family: 'JetBrains Mono', 'Courier New', monospace;
-      line-height: 1.6;
-      color: #e0e0e0;
-      background: #000;
+      font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      color: var(--text);
+      background: var(--bg);
+      min-height: 100vh;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
     }
-    .container { max-width: 1100px; margin: 0 auto; padding: 2rem; }
+    .container { max-width: 1120px; margin: 0 auto; padding: 1.5rem 2rem; }
+    .mono { font-family: 'JetBrains Mono', monospace; }
+
     header {
       text-align: center;
-      padding: 3rem 1rem 2rem;
-      border-bottom: 1px solid rgba(255,255,255,0.06);
-      margin-bottom: 2rem;
+      padding: 2.5rem 1rem 1.5rem;
+      position: relative;
     }
-    header h1 { font-size: 2rem; margin-bottom: 0.5rem; }
-    header p { color: #999; font-size: 0.9rem; }
-    .dashboard-header {
-      display: flex; justify-content: space-between; align-items: center;
-      margin-bottom: 2rem;
+    header h1 {
+      font-size: 1.75rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      background: linear-gradient(135deg, #f1f5f9 0%, #818cf8 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
     }
-    .last-updated { color: #666; font-size: 0.85rem; }
-    .refresh-btn {
-      background: rgba(108,99,255,0.1); border: 1px solid rgba(108,99,255,0.2);
-      color: #6C63FF; padding: 0.5rem 1rem; border-radius: 8px;
-      cursor: pointer; font-family: inherit; font-size: 0.85rem;
+    header .subtitle {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      margin-top: 0.25rem;
     }
-    .refresh-btn:hover { background: rgba(108,99,255,0.2); }
+    .header-actions {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 1.5rem;
+      padding-top: 1rem;
+      border-top: 1px solid var(--border);
+    }
+    .last-updated {
+      color: var(--text-muted);
+      font-size: 0.8rem;
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .btn-group { display: flex; gap: 0.5rem; }
+    .btn {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text-secondary);
+      padding: 0.45rem 0.9rem;
+      border-radius: 8px;
+      cursor: pointer;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.8rem;
+      font-weight: 500;
+      transition: all 0.15s ease;
+    }
+    .btn:hover {
+      background: rgba(255,255,255,0.06);
+      border-color: var(--border-hover);
+      color: var(--text);
+    }
+    .btn-primary {
+      background: rgba(129,140,248,0.12);
+      border-color: rgba(129,140,248,0.2);
+      color: var(--accent);
+    }
+    .btn-primary:hover {
+      background: rgba(129,140,248,0.2);
+      border-color: rgba(129,140,248,0.3);
+    }
+
+    .update-banner {
+      background: var(--success-bg);
+      border: 1px solid rgba(74,222,128,0.2);
+      border-radius: var(--radius);
+      padding: 0.6rem 1rem;
+      margin-bottom: 1.25rem;
+      display: none;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.85rem;
+      animation: fadeIn 0.3s ease;
+    }
+    .update-banner.show { display: flex; }
+    .update-banner a {
+      color: var(--success);
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 0.8rem;
+    }
+    .update-banner a:hover { text-decoration: underline; }
+
+    .quick-stats {
+      display: flex;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+      margin-bottom: 1.25rem;
+    }
+    .stat-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.3rem 0.75rem;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      font-weight: 500;
+      background: var(--surface);
+      border: 1px solid var(--border);
+    }
+    .stat-pill .dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+    }
+    .stat-pill .dot.up { background: var(--success); }
+    .stat-pill .dot.degraded { background: var(--warning); }
+    .stat-pill .dot.down { background: var(--error); }
+    .stat-pill .total { color: var(--text); }
+    .stat-pill .up { color: var(--success); }
+    .stat-pill .degraded { color: var(--warning); }
+    .stat-pill .down { color: var(--error); }
+
+    .search-bar {
+      position: relative;
+      margin-bottom: 1.5rem;
+    }
+    .search-bar input {
+      width: 100%;
+      padding: 0.65rem 1rem 0.65rem 2.5rem;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.85rem;
+      outline: none;
+      transition: all 0.15s ease;
+    }
+    .search-bar input:focus {
+      border-color: rgba(129,140,248,0.3);
+      box-shadow: 0 0 0 3px rgba(129,140,248,0.08);
+    }
+    .search-bar input::placeholder { color: var(--text-muted); }
+    .search-bar .search-icon {
+      position: absolute;
+      left: 0.85rem;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      pointer-events: none;
+    }
+
     .section-title {
-      font-size: 1.1rem; margin-bottom: 1rem; color: #ccc;
-      border-bottom: 1px solid rgba(255,255,255,0.06); padding-bottom: 0.5rem;
+      font-size: 0.8rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-muted);
+      margin-bottom: 0.75rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
     }
+    .section-title::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
     .cards {
-      display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-      gap: 1rem; margin-bottom: 2.5rem;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 1rem;
+      margin-bottom: 2.5rem;
     }
     .card {
-      background: linear-gradient(135deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01));
-      border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; padding: 1.25rem;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 1.25rem;
+      position: relative;
+      overflow: hidden;
+      transition: all 0.2s ease;
+      animation: fadeIn 0.4s ease both;
     }
+    .card:hover {
+      border-color: var(--border-hover);
+      transform: translateY(-2px);
+      box-shadow: var(--shadow);
+    }
+    .card-accent {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 3px;
+      height: 100%;
+      border-radius: 3px 0 0 3px;
+    }
+    .card-accent.up { background: var(--success); box-shadow: 0 0 10px rgba(74,222,128,0.3); }
+    .card-accent.degraded { background: var(--warning); box-shadow: 0 0 10px rgba(251,191,36,0.3); }
+    .card-accent.down { background: var(--error); box-shadow: 0 0 10px rgba(248,113,113,0.3); }
+
     .card-header {
-      display: flex; justify-content: space-between; align-items: center;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 0.6rem;
+    }
+    .card-left { display: flex; align-items: center; gap: 0.6rem; min-width: 0; }
+    .card-name { font-weight: 600; font-size: 0.9rem; color: var(--text); }
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      padding: 0.15rem 0.55rem;
+      border-radius: 10px;
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: capitalize;
+      white-space: nowrap;
+    }
+    .status-badge.up { background: var(--success-bg); color: var(--success); }
+    .status-badge.degraded { background: var(--warning-bg); color: var(--warning); }
+    .status-badge.down { background: var(--error-bg); color: var(--error); }
+    .card-url {
+      color: var(--text-secondary);
+      font-size: 0.75rem;
+      word-break: break-all;
+      margin-bottom: 0.4rem;
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .card-meta {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-top: 0.6rem;
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+    }
+    .card-meta .host-badge {
+      background: rgba(255,255,255,0.04);
+      padding: 0.15rem 0.5rem;
+      border-radius: 6px;
+      font-size: 0.7rem;
+      border: 1px solid var(--border);
+    }
+    .card-meta .latency {
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--text-secondary);
+    }
+    .service-logo { display: inline-flex; vertical-align: middle; flex-shrink: 0; }
+    .service-logo svg { display: block; }
+
+    .service-stats {
+      display: flex;
+      gap: 1rem;
+      margin-top: 0.6rem;
+      padding-top: 0.6rem;
+      border-top: 1px solid var(--border);
+    }
+    .stat-item {
+      display: flex;
+      flex-direction: column;
+    }
+    .stat-item .stat-label {
+      font-size: 0.65rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--text-muted);
+    }
+    .stat-item .stat-value {
+      font-size: 1.1rem;
+      font-weight: 700;
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--text);
+      margin-top: 0.1rem;
+    }
+    .stat-item .stat-sub {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .auth-hint {
+      color: var(--warning);
+      font-size: 0.75rem;
+      margin-top: 0.5rem;
+      font-style: italic;
+    }
+    .card.hidden { display: none; }
+
+    .node-section { margin-bottom: 2rem; }
+    .node-header {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
       margin-bottom: 0.75rem;
     }
-    .card-name { font-weight: 600; font-size: 0.95rem; }
-    .status-indicator { display: flex; align-items: center; gap: 0.4rem; font-size: 0.8rem; }
-    .dot {
-      width: 10px; height: 10px; border-radius: 50%;
+    .node-name { font-weight: 600; font-size: 0.95rem; color: var(--text); }
+    .node-hostname {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      font-family: 'JetBrains Mono', monospace;
     }
-    .dot.up { background: #4CAF50; box-shadow: 0 0 8px rgba(76,175,80,0.4); }
-    .dot.degraded { background: #FF9800; box-shadow: 0 0 8px rgba(255,152,0,0.4); }
-    .dot.down { background: #f44336; box-shadow: 0 0 8px rgba(244,67,54,0.4); }
-    .card-url { color: #666; font-size: 0.75rem; word-break: break-all; }
-    .card-latency { color: #888; font-size: 0.8rem; margin-top: 0.25rem; }
-    .host-badge {
-      display: inline-block; background: rgba(255,255,255,0.04);
-      padding: 0.15rem 0.5rem; border-radius: 6px; font-size: 0.7rem;
-      color: #777; border: 1px solid rgba(255,255,255,0.06); margin-top: 0.5rem;
-    }
+
     .system-grid {
-      display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-      gap: 1rem; margin-bottom: 2.5rem;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+      gap: 0.75rem;
     }
     .gauge {
-      background: linear-gradient(135deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01));
-      border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; padding: 1.25rem;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1rem;
+      transition: all 0.2s ease;
     }
-    .gauge-label { font-size: 0.85rem; color: #999; margin-bottom: 0.5rem; }
-    .gauge-value { font-size: 1.5rem; font-weight: 700; margin-bottom: 0.5rem; }
+    .gauge:hover { border-color: var(--border-hover); }
+    .gauge-label {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--text-muted);
+      margin-bottom: 0.3rem;
+    }
+    .gauge-value {
+      font-size: 1.35rem;
+      font-weight: 700;
+      font-family: 'JetBrains Mono', monospace;
+      margin-bottom: 0.5rem;
+    }
     .gauge-bar {
-      height: 6px; background: rgba(255,255,255,0.06); border-radius: 3px; overflow: hidden;
+      height: 4px;
+      background: rgba(255,255,255,0.06);
+      border-radius: 2px;
+      overflow: hidden;
     }
     .gauge-bar-fill {
-      height: 100%; border-radius: 3px; transition: width 0.5s ease;
+      height: 100%;
+      border-radius: 2px;
+      transition: width 0.6s ease;
     }
-    .gauge-bar-fill.low { background: #4CAF50; }
-    .gauge-bar-fill.med { background: #FF9800; }
-    .gauge-bar-fill.high { background: #f44336; }
-    .gauge-detail { font-size: 0.75rem; color: #666; margin-top: 0.35rem; }
-    .node-section { margin-bottom: 2rem; }
-    .node-header { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem; }
-    .node-name { font-size: 1.1rem; font-weight: 600; color: #ccc; }
-    .node-hostname { font-size: 0.8rem; color: #666; }
+    .gauge-bar-fill.low { background: var(--success); }
+    .gauge-bar-fill.med { background: var(--warning); }
+    .gauge-bar-fill.high { background: var(--error); }
+    .gauge-detail {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      margin-top: 0.4rem;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .docker-section { margin-bottom: 2.5rem; }
     .docker-table {
-      width: 100%; border-collapse: collapse; margin-bottom: 2.5rem;
+      width: 100%;
+      border-collapse: collapse;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
     }
     .docker-table th {
-      text-align: left; padding: 0.75rem 1rem; font-size: 0.8rem;
-      color: #888; border-bottom: 1px solid rgba(255,255,255,0.06);
-      text-transform: uppercase; letter-spacing: 0.05em;
+      text-align: left;
+      padding: 0.65rem 1rem;
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      border-bottom: 1px solid var(--border);
+      background: rgba(255,255,255,0.02);
     }
     .docker-table td {
-      padding: 0.75rem 1rem; font-size: 0.85rem;
-      color: #aaa; border-bottom: 1px solid rgba(255,255,255,0.03);
+      padding: 0.6rem 1rem;
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      border-bottom: 1px solid rgba(255,255,255,0.03);
+      font-family: 'JetBrains Mono', monospace;
     }
+    .docker-table tr:last-child td { border-bottom: none; }
     .docker-table tr:hover td { background: rgba(255,255,255,0.02); }
-    .container-status { display: inline-flex; align-items: center; gap: 0.4rem; }
-    .cdot { width: 8px; height: 8px; border-radius: 50%; }
-    .cdot.running { background: #4CAF50; }
-    .cdot.exited { background: #f44336; }
-    .cdot.paused { background: #FF9800; }
-    .error-state { color: #f44336; padding: 2rem; text-align: center; }
+    .container-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.1rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 500;
+    }
+    .container-pill.running { background: var(--success-bg); color: var(--success); }
+    .container-pill.exited { background: var(--error-bg); color: var(--error); }
+    .container-pill.paused { background: var(--warning-bg); color: var(--warning); }
+    .container-pill .cdot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+    }
+    .container-pill .cdot.running { background: var(--success); }
+    .container-pill .cdot.exited { background: var(--error); }
+    .container-pill .cdot.paused { background: var(--warning); }
+
+    .error-state { color: var(--error); padding: 1.5rem; text-align: center; }
+
     .modal-overlay {
-      display: none; position: fixed; inset: 0; z-index: 1000;
-      background: rgba(0,0,0,0.7); backdrop-filter: blur(4px);
-      justify-content: center; align-items: flex-start; overflow-y: auto;
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 1000;
+      background: rgba(0,0,0,0.7);
+      backdrop-filter: blur(8px);
+      justify-content: center;
+      align-items: flex-start;
+      overflow-y: auto;
       padding: 2rem;
     }
     .modal {
       background: linear-gradient(135deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02));
-      border: 1px solid rgba(255,255,255,0.1); border-radius: 16px;
-      width: 100%; max-width: 640px; margin: auto;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      width: 100%;
+      max-width: 640px;
+      margin: auto;
       box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+      backdrop-filter: blur(20px);
     }
     .modal-header {
-      display: flex; justify-content: space-between; align-items: center;
-      padding: 1.25rem 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.06);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1.25rem 1.5rem;
+      border-bottom: 1px solid var(--border);
     }
-    .modal-header h2 { font-size: 1.1rem; color: #ccc; }
+    .modal-header h2 { font-size: 1.1rem; color: var(--text); font-weight: 600; }
     .modal-close {
-      background: none; border: none; color: #666; font-size: 1.2rem;
-      cursor: pointer; padding: 0.25rem;
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      font-size: 1.2rem;
+      cursor: pointer;
+      padding: 0.25rem;
+      transition: color 0.15s;
     }
-    .modal-close:hover { color: #f44336; }
+    .modal-close:hover { color: var(--error); }
     .modal-body { padding: 1.5rem; }
     .modal-footer {
-      display: flex; justify-content: flex-end; gap: 0.5rem;
-      padding: 1rem 1.5rem; border-top: 1px solid rgba(255,255,255,0.06);
+      display: flex;
+      justify-content: flex-end;
+      gap: 0.5rem;
+      padding: 1rem 1.5rem;
+      border-top: 1px solid var(--border);
     }
+
     .settings-input {
-      width: 100%; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1);
-      border-radius: 8px; padding: 0.5rem 0.75rem; color: #e0e0e0;
-      font-family: inherit; font-size: 0.85rem; outline: none;
+      width: 100%;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.5rem 0.75rem;
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.85rem;
+      outline: none;
     }
-    .settings-input:focus { border-color: rgba(108,99,255,0.4); }
+    .settings-input:focus { border-color: rgba(129,140,248,0.4); }
     .settings-field { margin-bottom: 0.75rem; }
-    .settings-field label { display: block; font-size: 0.8rem; color: #999; margin-bottom: 0.25rem; }
+    .settings-field label {
+      display: block;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-bottom: 0.25rem;
+    }
     .settings-field label input[type="checkbox"] { margin-right: 0.35rem; }
     .settings-node {
-      background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06);
-      border-radius: 12px; padding: 1rem; margin-bottom: 1rem;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1rem;
+      margin-bottom: 1rem;
     }
     .settings-node-header {
-      display: flex; justify-content: space-between; align-items: center;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
       margin-bottom: 0.75rem;
     }
     .settings-remove {
-      background: none; border: none; color: #f44336; font-size: 0.9rem;
-      cursor: pointer; padding: 0.15rem 0.4rem; border-radius: 4px;
+      background: none;
+      border: none;
+      color: var(--error);
+      font-size: 0.9rem;
+      cursor: pointer;
+      padding: 0.15rem 0.4rem;
+      border-radius: 4px;
     }
-    .settings-remove:hover { background: rgba(244,67,54,0.1); }
+    .settings-remove:hover { background: rgba(248,113,113,0.1); }
     .settings-service {
-      display: flex; gap: 0.5rem; align-items: center; margin-bottom: 0.4rem;
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+      margin-bottom: 0.4rem;
     }
     .settings-service .s-svc-name { flex: 1; }
     .settings-service .s-svc-url { flex: 2; }
-    .settings-services { margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid rgba(255,255,255,0.04); }
+    .settings-services { margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid var(--border); }
     .settings-services label { display: block; margin-bottom: 0.4rem; }
-    .service-logo { display: inline-flex; vertical-align: middle; margin-right: 0.4rem; }
-    .service-logo svg { display: block; }
-    .service-stats { margin: 0.5rem 0 0.25rem; padding-top: 0.5rem; border-top: 1px solid rgba(255,255,255,0.04); }
-    .stat-row { display: flex; align-items: center; gap: 0.5rem; font-size: 0.8rem; padding: 0.15rem 0; }
-    .stat-label { color: #888; min-width: 5rem; }
-    .stat-value { color: #e0e0e0; font-weight: 600; }
-    .stat-pct { color: #FF9800; font-size: 0.75rem; }
-    .auth-hint { color: #FF9800; font-size: 0.75rem; margin-top: 0.35rem; font-style: italic; }
     .settings-auth { margin-top: 0.5rem; padding: 0.5rem; background: rgba(255,255,255,0.02); border-radius: 8px; }
-    .settings-auth summary { cursor: pointer; font-size: 0.8rem; color: #888; }
-    .settings-auth summary:hover { color: #ccc; }
+    .settings-auth summary { cursor: pointer; font-size: 0.8rem; color: var(--text-muted); }
+    .settings-auth summary:hover { color: var(--text); }
     .settings-auth .settings-field { margin-bottom: 0.4rem; }
     .settings-auth .settings-field label { font-size: 0.75rem; }
-    .settings-auth select { width: 100%; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 0.4rem 0.6rem; color: #e0e0e0; font-family: inherit; font-size: 0.8rem; outline: none; }
+    .settings-auth select {
+      width: 100%;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.4rem 0.6rem;
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.8rem;
+      outline: none;
+    }
+
     footer {
-      text-align: center; padding: 2rem; border-top: 1px solid #222;
-      color: #666; font-size: 0.875rem;
+      text-align: center;
+      padding: 2rem 1rem;
+      border-top: 1px solid var(--border);
+      color: var(--text-muted);
+      font-size: 0.8rem;
     }
-    .update-banner {
-      background: rgba(76,175,80,0.1); border: 1px solid rgba(76,175,80,0.2);
-      border-radius: 10px; padding: 0.6rem 1rem; margin-bottom: 1.5rem;
-      display: none; justify-content: space-between; align-items: center;
-      font-size: 0.85rem;
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
     }
-    .update-banner.show { display: flex; }
-    .update-banner a { color: #4CAF50; text-decoration: none; font-weight: 600; }
-    .update-banner a:hover { text-decoration: underline; }
+
     @media (max-width: 768px) {
-      header h1 { font-size: 1.5rem; }
+      .container { padding: 1rem; }
+      header h1 { font-size: 1.4rem; }
       .cards { grid-template-columns: 1fr; }
       .system-grid { grid-template-columns: 1fr 1fr; }
+      .header-actions { flex-direction: column; gap: 0.75rem; align-items: stretch; text-align: center; }
+      .btn-group { justify-content: center; }
+      .service-stats { flex-wrap: wrap; gap: 0.75rem; }
+      .docker-table { font-size: 0.75rem; }
+      .docker-table th, .docker-table td { padding: 0.5rem 0.6rem; }
     }
   </style>
 </head>
 <body>
   <div class="container">
     <header>
-      <h1 id="title">Homelab Monitor</h1>
-      <p>Real-time status of services and system resources</p>
-    </header>
-
-    <div class="dashboard-header">
-      <span class="last-updated" id="lastUpdated">Loading...</span>
-      <div>
-        <button class="refresh-btn" id="settingsBtn">⚙ Settings</button>
-        <button class="refresh-btn" id="refreshBtn">Refresh Now</button>
+      <h1 id="title">⚡ Homelab Monitor</h1>
+      <p class="subtitle">Real-time status of your infrastructure</p>
+      <div class="header-actions">
+        <span class="last-updated" id="lastUpdated">Loading...</span>
+        <div class="btn-group">
+          <button class="btn" id="settingsBtn">⚙ Settings</button>
+          <button class="btn btn-primary" id="refreshBtn">↻ Refresh</button>
+        </div>
       </div>
-    </div>
+    </header>
 
     <div id="updateBanner" class="update-banner">
       <span>🚀 <span id="updateMsg">Update available</span></span>
       <a href="#" onclick="event.preventDefault(); window.open('https://github.com/chasew28/homelab-monitor/releases', '_blank')">View Release</a>
     </div>
 
-    <h2 class="section-title">Services</h2>
-    <div class="cards" id="servicesCards">
-      <div class="card"><p style="color:#666">Loading services...</p></div>
+    <div class="quick-stats" id="quickStats"></div>
+
+    <div class="search-bar">
+      <span class="search-icon">🔍</span>
+      <input type="text" id="searchInput" placeholder="Search services..." oninput="filterServices()">
     </div>
 
-    <h2 class="section-title">System Resources</h2>
+    <div class="section-title">Services</div>
+    <div class="cards" id="servicesCards">
+      <div class="card"><p style="color:var(--text-muted);font-size:0.85rem">Loading services...</p></div>
+    </div>
+
+    <div class="section-title">System Resources</div>
     <div id="systemGrid"></div>
 
-    <h2 class="section-title" id="dockerTitle" style="display:none">Docker Containers</h2>
+    <div class="section-title" id="dockerTitle" style="display:none">Docker Containers</div>
     <div id="dockerSection"></div>
   </div>
 
@@ -236,14 +624,14 @@
       </div>
       <div class="modal-body" id="settingsBody"></div>
       <div class="modal-footer">
-        <button class="refresh-btn" onclick="closeSettings()">Cancel</button>
-        <button class="refresh-btn" id="saveSettingsBtn" onclick="saveSettings()">Save</button>
+        <button class="btn" onclick="closeSettings()">Cancel</button>
+        <button class="btn btn-primary" id="saveSettingsBtn" onclick="saveSettings()">Save Changes</button>
       </div>
     </div>
   </div>
 
   <footer>
-    <p>Homelab Monitor</p>
+    <p>Homelab Monitor &mdash; Open source infrastructure dashboard</p>
   </footer>
 
   <script>
@@ -260,13 +648,16 @@
         `Last updated: ${new Date().toLocaleTimeString()}`;
     }
 
-    function dot(status) {
-      return `<span class="dot ${status}"></span>`;
-    }
+    const COLORS = {
+      adguard: '#4ade80',
+      pihole: '#60a5fa',
+      plex: '#f97316',
+      qbittorrent: '#22d3ee',
+    };
 
     const LOGOS = {
-      adguard: '<svg viewBox="0 0 40 40" width="28" height="28"><rect width="40" height="40" rx="8" fill="#4CAF50"/><text x="20" y="26" text-anchor="middle" fill="#fff" font-size="16" font-family="sans-serif" font-weight="bold">AG</text></svg>',
-      pihole: '<svg viewBox="0 0 40 40" width="28" height="28"><rect width="40" height="40" rx="8" fill="#2196F3"/><text x="20" y="26" text-anchor="middle" fill="#fff" font-size="16" font-family="sans-serif" font-weight="bold">PH</text></svg>',
+      adguard: '<svg viewBox="0 0 32 32" width="26" height="26"><rect width="32" height="32" rx="8" fill="#4ade80" opacity="0.15"/><text x="16" y="21" text-anchor="middle" fill="#4ade80" font-size="13" font-family="sans-serif" font-weight="700">AG</text></svg>',
+      pihole: '<svg viewBox="0 0 32 32" width="26" height="26"><rect width="32" height="32" rx="8" fill="#60a5fa" opacity="0.15"/><text x="16" y="21" text-anchor="middle" fill="#60a5fa" font-size="13" font-family="sans-serif" font-weight="700">PH</text></svg>',
     };
 
     function fmtNum(n) {
@@ -274,34 +665,68 @@
       return n.toLocaleString();
     }
 
-    function renderServices(data) {
-      const container = document.getElementById('servicesCards');
+    function renderQuickStats(data) {
+      const container = document.getElementById('quickStats');
       if (!data || data.length === 0) {
-        container.innerHTML = '<div class="card"><p style="color:#666">No services configured</p></div>';
+        container.innerHTML = '';
         return;
       }
-      container.innerHTML = data.map(s => {
+      const total = data.length;
+      const up = data.filter(s => s.status === 'up').length;
+      const degraded = data.filter(s => s.status === 'degraded').length;
+      const down = data.filter(s => s.status === 'down').length;
+      container.innerHTML = `
+        <span class="stat-pill"><span style="color:var(--text);font-weight:600">${total}</span> Services</span>
+        ${up ? `<span class="stat-pill"><span class="dot up"></span><span class="up">${up} Up</span></span>` : ''}
+        ${degraded ? `<span class="stat-pill"><span class="dot degraded"></span><span class="degraded">${degraded} Degraded</span></span>` : ''}
+        ${down ? `<span class="stat-pill"><span class="dot down"></span><span class="down">${down} Down</span></span>` : ''}
+      `;
+    }
+
+    function filterServices() {
+      const q = document.getElementById('searchInput').value.toLowerCase();
+      document.querySelectorAll('#servicesCards .card').forEach(card => {
+        const text = card.dataset.search || '';
+        card.classList.toggle('hidden', q && !text.includes(q));
+      });
+    }
+
+    function renderServices(data) {
+      const container = document.getElementById('servicesCards');
+      renderQuickStats(data);
+      if (!data || data.length === 0) {
+        container.innerHTML = '<div class="card"><p style="color:var(--text-muted);font-size:0.85rem">No services configured</p></div>';
+        return;
+      }
+      container.innerHTML = data.map((s, i) => {
         const logoHtml = s.type && LOGOS[s.type] ? `<span class="service-logo">${LOGOS[s.type]}</span>` : '';
         const label = s.service_name || s.name;
+        const searchText = `${label} ${s.url} ${s.host}`.toLowerCase();
         let statsHtml = '';
         if (s.authError) {
-          statsHtml = '<div class="auth-hint">Auth required — add credentials in Settings</div>';
+          statsHtml = '<div class="auth-hint">🔐 Auth required — add credentials in Settings</div>';
         } else if (s.stats) {
-          const rows = [];
-          if (s.stats.queries !== undefined) rows.push(`<div class="stat-row"><span class="stat-label">Queries</span><span class="stat-value">${fmtNum(s.stats.queries)}</span></div>`);
-          if (s.stats.blocked !== undefined) rows.push(`<div class="stat-row"><span class="stat-label">Blocked</span><span class="stat-value">${fmtNum(s.stats.blocked)}</span>${s.stats.blockedPercent !== undefined ? `<span class="stat-pct">(${s.stats.blockedPercent}%)</span>` : ''}</div>`);
-          if (rows.length) statsHtml = `<div class="service-stats">${rows.join('')}</div>`;
+          const items = [];
+          if (s.stats.queries !== undefined) items.push(`<div class="stat-item"><span class="stat-label">Queries</span><span class="stat-value">${fmtNum(s.stats.queries)}</span></div>`);
+          if (s.stats.blocked !== undefined) items.push(`<div class="stat-item"><span class="stat-label">Blocked</span><span class="stat-value">${fmtNum(s.stats.blocked)}</span>${s.stats.blockedPercent !== undefined ? `<span class="stat-sub">${s.stats.blockedPercent}%</span>` : ''}</div>`);
+          if (items.length) statsHtml = `<div class="service-stats">${items.join('')}</div>`;
         }
         return `
-          <div class="card">
+          <div class="card" data-search="${searchText}" style="animation-delay:${i * 0.04}s">
+            <div class="card-accent ${s.status}"></div>
             <div class="card-header">
-              <span class="card-name">${logoHtml}${label}</span>
-              <span class="status-indicator">${dot(s.status)} ${s.status}</span>
+              <div class="card-left">
+                ${logoHtml}
+                <span class="card-name">${label}</span>
+              </div>
+              <span class="status-badge ${s.status}">${s.status}</span>
             </div>
             <div class="card-url">${s.url}</div>
-            ${s.latency_ms !== null ? `<div class="card-latency">${s.latency_ms}ms</div>` : ''}
             ${statsHtml}
-            <div class="host-badge">${s.host}</div>
+            <div class="card-meta">
+              ${s.latency_ms !== null ? `<span class="latency">${s.latency_ms}ms</span>` : ''}
+              <span class="host-badge">${s.host}</span>
+            </div>
           </div>
         `;
       }).join('');
@@ -339,7 +764,7 @@
                 <div class="gauge-label">CPU</div>
                 <div class="gauge-value">${data.cpu_percent}%</div>
                 <div class="gauge-bar"><div class="gauge-bar-fill ${barClass(data.cpu_percent)}" style="width:${data.cpu_percent}%"></div></div>
-                <div class="gauge-detail">Temp: ${temp}</div>
+                <div class="gauge-detail">${temp}</div>
               </div>
               <div class="gauge">
                 <div class="gauge-label">RAM</div>
@@ -355,8 +780,8 @@
               </div>
               <div class="gauge">
                 <div class="gauge-label">Uptime</div>
-                <div class="gauge-value" style="font-size:1.2rem">${fmtUptime(data.uptime_seconds)}</div>
-                <div class="gauge-detail">Host: ${data.hostname}</div>
+                <div class="gauge-value" style="font-size:1.15rem">${fmtUptime(data.uptime_seconds)}</div>
+                <div class="gauge-detail">${data.hostname}</div>
               </div>
             </div>
           </div>
@@ -379,22 +804,24 @@
       let html = '';
       for (const [node, containers] of Object.entries(data)) {
         if (!containers || !Array.isArray(containers) || containers.length === 0) continue;
-        const sc = s => s === 'running' ? 'running' : s === 'exited' ? 'exited' : 'paused';
+        const pillCls = s => s === 'running' ? 'running' : s === 'exited' ? 'exited' : 'paused';
         html += `
-          <p style="color:#999;font-size:0.85rem;margin-bottom:0.5rem">${node}</p>
-          <table class="docker-table">
-            <thead><tr><th>Name</th><th>Image</th><th>Status</th><th>Ports</th></tr></thead>
-            <tbody>
-              ${containers.map(c => `
-                <tr>
-                  <td><span class="container-status"><span class="cdot ${sc(c.state)}"></span> ${c.name}</span></td>
-                  <td>${c.image}</td>
-                  <td>${c.status}</td>
-                  <td>${c.ports || '—'}</td>
-                </tr>
-              `).join('')}
-            </tbody>
-          </table>
+          <div class="docker-section">
+            <p style="color:var(--text-muted);font-size:0.8rem;margin-bottom:0.5rem;font-family:'JetBrains Mono',monospace">${node}</p>
+            <table class="docker-table">
+              <thead><tr><th>Container</th><th>Image</th><th>Status</th><th>Ports</th></tr></thead>
+              <tbody>
+                ${containers.map(c => `
+                  <tr>
+                    <td style="font-weight:500">${c.name}</td>
+                    <td>${c.image}</td>
+                    <td><span class="container-pill ${pillCls(c.state)}"><span class="cdot ${pillCls(c.state)}"></span> ${c.status}</span></td>
+                    <td>${c.ports || '—'}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
         `;
       }
       section.innerHTML = html;
@@ -410,7 +837,7 @@
           fetchJSON('/update'),
         ]);
         if (config && config.title) {
-          document.getElementById('title').textContent = config.title;
+          document.getElementById('title').innerHTML = `⚡ ${config.title}`;
           document.title = config.title;
         }
         const banner = document.getElementById('updateBanner');
@@ -445,14 +872,12 @@
           <label>Dashboard Title</label>
           <input type="text" id="s-title" value="${esc(config.title || '')}" class="settings-input" />
         </div>
-        <h3 style="margin-top:1.5rem">Machines</h3>
+        <h3 style="margin-top:1.5rem;font-size:0.9rem;color:var(--text);font-weight:600">Machines</h3>
         <div id="s-nodes">
       `;
-      (config.nodes || []).forEach((node, i) => {
-        html += renderNode(node, i);
-      });
+      (config.nodes || []).forEach((node, i) => { html += renderNode(node, i); });
       html += `</div>
-        <button class="refresh-btn" onclick="addNode()" style="margin-top:0.5rem">+ Add Machine</button>
+        <button class="btn" onclick="addNode()" style="margin-top:0.5rem;width:100%;text-align:center">+ Add Machine</button>
       `;
       body.innerHTML = html;
     }
@@ -471,7 +896,7 @@
       return `
         <div class="settings-node" data-idx="${idx}">
           <div class="settings-node-header">
-            <span style="font-size:0.9rem;color:#ccc">${esc(node.name || 'Unnamed')}</span>
+            <span style="font-size:0.9rem;color:var(--text)">${esc(node.name || 'Unnamed')}</span>
             <button class="settings-remove" onclick="removeNode(this)" title="Remove">✕</button>
           </div>
           <div class="settings-field">
@@ -513,19 +938,14 @@
                 </details>
               </div>
             `).join('')}
-            <button class="refresh-btn" onclick="addService(this)" style="font-size:0.8rem;padding:0.3rem 0.6rem;margin-top:0.3rem">+ Add Service</button>
+            <button class="btn" onclick="addService(this)" style="font-size:0.8rem;padding:0.3rem 0.6rem;margin-top:0.3rem;width:100%;text-align:center">+ Add Service</button>
           </div>
         </div>
       `;
     }
 
-    function removeNode(btn) {
-      btn.closest('.settings-node').remove();
-    }
-
-    function removeService(btn) {
-      btn.closest('.settings-service').remove();
-    }
+    function removeNode(btn) { btn.closest('.settings-node').remove(); }
+    function removeService(btn) { btn.closest('.settings-service').remove(); }
 
     function addNode() {
       const container = document.getElementById('s-nodes');
@@ -613,7 +1033,7 @@
       } catch (err) {
         alert('Failed to save settings: ' + err.message);
       } finally {
-        btn.textContent = 'Save';
+        btn.textContent = 'Save Changes';
         btn.disabled = false;
       }
     }
