@@ -4,9 +4,21 @@ A self-hosted monitoring dashboard for your homelab. Track service health, syste
 
 ## Quick Install
 
+### Linux / macOS
+
 ```bash
 bash <(curl -sSL https://raw.githubusercontent.com/chasew28/homelab-monitor/main/install.sh)
+```
 
+### Windows (PowerShell)
+
+```powershell
+iex ((Invoke-WebRequest -Uri https://raw.githubusercontent.com/chasew28/homelab-monitor/main/install.ps1).Content)
+```
+
+### After installing
+
+```bash
 # Create a project folder and set it up
 mkdir my-monitor && cd my-monitor
 hlm setup     # interactive config wizard
@@ -116,10 +128,18 @@ nodes:
 On each additional machine, install hlm the same way:
 
 ```bash
+# Linux / macOS
 bash <(curl -sSL https://raw.githubusercontent.com/chasew28/homelab-monitor/main/install.sh)
 hlm agent
-# → listens on port 5100
 ```
+
+```powershell
+# Windows
+iex ((Invoke-WebRequest -Uri https://raw.githubusercontent.com/chasew28/homelab-monitor/main/install.ps1).Content)
+hlm agent
+```
+
+Listens on port 5100 by default.
 
 Or run as a systemd service:
 

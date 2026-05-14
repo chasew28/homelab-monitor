@@ -8,7 +8,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 import yaml
-from flask import Flask, jsonify, send_from_directory
+from flask import Flask, jsonify, request, send_from_directory
 from flask_cors import CORS
 
 app = Flask(__name__, static_folder=None)
@@ -30,6 +30,26 @@ def find_config():
 
 CONFIG_PATH = find_config()
 DASHBOARD_DIR = HERE / "dashboard"
+
+_NODE_KEYS = ["name", "host", "agent_port", "docker", "services"]
+_SVC_KEYS = ["name", "url"]
+
+
+def _order_cfg(data):
+    result = {}
+    for k in ("title", "nodes"):
+        if k in data:
+            result[k] = data[k]
+    ordered_nodes = []
+    for node in result.get("nodes", []):
+        onode = {}
+        for k in _NODE_KEYS:
+            if k in node:
+                onode[k] = node[k]
+        onode["services"] = [{k: s[k] for k in _SVC_KEYS if k in s} for s in node.get("services", [])]
+        ordered_nodes.append(onode)
+    result["nodes"] = ordered_nodes
+    return result
 
 
 def load_config():
@@ -153,20 +173,26 @@ def docker_status():
     results = {}
     for node in cfg.get("nodes", []):
         if node.get("docker") and (node["host"] == "127.0.0.1" or not node.get("agent_port")):
-            results[node["name"]] = get_local_docker_info()
+            info = get_local_docker_info()
+            if isinstance(info, list):
+                results[node["name"]] = info
     return jsonify(results)
 
 
-@app.route("/api/config")
+@app.route("/api/config", methods=["GET", "PUT"])
 def config_info():
+    if request.method == "PUT":
+        try:
+            data = _order_cfg(request.get_json(force=True))
+            with open(CONFIG_PATH, "w") as f:
+                yaml.dump(data, f, default_flow_style=False, allow_unicode=True, sort_keys=False)
+            return jsonify({"status": "ok"})
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
     cfg = load_config()
-    return jsonify({
-        "title": cfg.get("title", "Homelab Monitor"),
-        "nodes": [
-            {"name": n["name"], "host": n["host"]}
-            for n in cfg.get("nodes", [])
-        ],
-    })
+    if cfg is None:
+        cfg = {"title": "Homelab Monitor", "nodes": []}
+    return jsonify(cfg)
 
 
 @app.route("/api/health")

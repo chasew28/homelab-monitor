@@ -73,35 +73,38 @@ def install_deps():
 
 def collect_nodes():
     nodes = []
-    p(f"\n  Let's set up your nodes. {C['grey']}(Ctrl+C to cancel at any time){C['reset']}\n")
+    p(f"\n  A {C['cyan']}node{C['reset']} is a machine on your network — a Raspberry Pi, server, NAS, or your main PC.")
+    p(f"  {C['grey']}Each node can have services (web apps, databases, etc.) that we'll check.{C['reset']}")
+    p(f"  {C['grey']}(Ctrl+C to cancel at any time){C['reset']}\n")
     i = 1
     while True:
-        p(f"\n  {C['purple']}── Node {i} ──{C['reset']}")
-        name = prompt("Node name", f"Node {i}")
-        host = prompt("Host / IP", "127.0.0.1")
+        p(f"\n  {C['purple']}── Machine {i} ──{C['reset']}")
+        name = prompt("Name for this machine", f"Machine {i}")
+        host = prompt("IP address or hostname (e.g. 192.168.1.10)", "127.0.0.1")
         is_local = host in ("127.0.0.1", "localhost")
         if is_local:
-            local = yn("Collect local system stats?", True)
-            agent_port = None if local else prompt("Agent port", "5100")
-            docker = yn("Show Docker containers?", True)
+            local = yn("Collect system stats (CPU, RAM, disk) from this machine?", True)
+            agent_port = None if local else prompt("Agent port (remote agent listens here)", "5100")
+            docker = yn("Monitor Docker containers on this machine?", True)
         else:
-            local = yn("Run agent on this node?", False)
+            local = yn("Run a monitoring agent on this remote machine?", False)
             if local:
-                agent_port = prompt("Agent port", "5100")
-                docker = yn("Show Docker containers?", False)
+                agent_port = prompt("Agent port (must match the agent's AGENT_PORT)", "5100")
+                docker = yn("Monitor Docker containers on this machine?", False)
             else:
                 agent_port = None
                 docker = False
 
         services = []
         p(f"\n  {C['grey']}── Services for {name} ──{C['reset']}")
+        p(f"  {C['grey']}Services are web apps or sites running on this machine we'll check are alive.{C['reset']}")
         j = 1
         while True:
             svc_name = prompt(f"  Service {j} name", "My App")
-            svc_url = prompt(f"  Service {j} URL", "http://localhost:8080")
+            svc_url = prompt(f"  Service {j} URL (e.g. http://192.168.1.10:8080)", "http://localhost:8080")
             services.append({"name": svc_name, "url": svc_url})
             j += 1
-            if not yn(f"  Add another service for {name}?", False):
+            if not yn(f"  Add another service?", False):
                 break
 
         nodes.append({
@@ -112,7 +115,7 @@ def collect_nodes():
             "services": services,
         })
         i += 1
-        if not yn("Add another node?", i <= 2):
+        if not yn("Add another machine?", i <= 2):
             break
     return nodes
 
@@ -145,7 +148,7 @@ def main():
     os.system("clear" if os.name == "posix" else "cls")
 
     boxed("Homelab Monitor — Setup")
-    p(f"\n  {C['grey']}This will guide you through configuring your homelab.{C['reset']}")
+    p(f"\n  {C['grey']}This will guide you through adding machines and services to monitor.{C['reset']}")
     p(f"  {C['grey']}You can always edit {C['cyan']}config.yml{C['grey']} manually later.{C['reset']}\n")
 
     title = ask_title()
@@ -156,7 +159,7 @@ def main():
     p(f"\n  {C['green']}{'─' * 40}{C['reset']}")
     p(f"  {C['green']}✓{C['reset']} Config written to {C['cyan']}{path}{C['reset']}")
     p(f"  {C['green']}{'─' * 40}{C['reset']}")
-    p(f"\n  {C['bold']}Nodes configured:{C['reset']}")
+    p(f"\n  {C['bold']}Machines configured:{C['reset']}")
     for n in nodes:
         tag = f"{C['green']}local{C['reset']}" if n["host"] in ("127.0.0.1", "localhost") else f"{C['cyan']}remote{C['reset']}"
         n_services = len(n["services"])
