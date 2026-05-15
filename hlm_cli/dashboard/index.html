@@ -446,14 +446,13 @@
       padding: 2rem;
     }
     .modal {
-      background: linear-gradient(135deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02));
+      background: var(--bg);
       border: 1px solid var(--border);
       border-radius: var(--radius-lg);
       width: 100%;
       max-width: 640px;
       margin: auto;
       box-shadow: 0 20px 60px rgba(0,0,0,0.5);
-      backdrop-filter: blur(20px);
     }
     .modal-header {
       display: flex;
@@ -648,21 +647,23 @@
         `Last updated: ${new Date().toLocaleTimeString()}`;
     }
 
-    const COLORS = {
-      adguard: '#4ade80',
-      pihole: '#60a5fa',
-      plex: '#f97316',
-      qbittorrent: '#22d3ee',
-    };
-
     const LOGOS = {
-      adguard: '<svg viewBox="0 0 32 32" width="26" height="26"><rect width="32" height="32" rx="8" fill="#4ade80" opacity="0.15"/><text x="16" y="21" text-anchor="middle" fill="#4ade80" font-size="13" font-family="sans-serif" font-weight="700">AG</text></svg>',
-      pihole: '<svg viewBox="0 0 32 32" width="26" height="26"><rect width="32" height="32" rx="8" fill="#60a5fa" opacity="0.15"/><text x="16" y="21" text-anchor="middle" fill="#60a5fa" font-size="13" font-family="sans-serif" font-weight="700">PH</text></svg>',
+      adguard: '<svg viewBox="0 0 32 32" width="26" height="26"><path d="M16 4L6 8v6c0 5.5 4 10.7 10 12.5 6-1.8 10-7 10-12.5V8l-10-4z" fill="rgba(74,222,128,0.15)" stroke="#4ade80" stroke-width="1.5" stroke-linejoin="round"/><path d="M12 17l3 3 6-6" fill="none" stroke="#4ade80" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+      pihole: '<svg viewBox="0 0 32 32" width="26" height="26"><path d="M16 4L6 8v6c0 5.5 4 10.7 10 12.5 6-1.8 10-7 10-12.5V8l-10-4z" fill="rgba(96,165,250,0.15)" stroke="#60a5fa" stroke-width="1.5" stroke-linejoin="round"/><circle cx="16" cy="16" r="3" fill="none" stroke="#60a5fa" stroke-width="1.5"/><line x1="13.5" y1="18.5" x2="18.5" y2="13.5" stroke="#60a5fa" stroke-width="1.5" stroke-linecap="round"/></svg>',
+      plex: '<svg viewBox="0 0 32 32" width="26" height="26"><rect width="32" height="32" rx="8" fill="rgba(249,115,22,0.15)"/><path d="M13 7l7 9-7 9" fill="none" stroke="#f97316" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+      qbittorrent: '<svg viewBox="0 0 32 32" width="26" height="26"><rect width="32" height="32" rx="8" fill="rgba(34,211,238,0.15)"/><circle cx="16" cy="16" r="5" fill="none" stroke="#22d3ee" stroke-width="1.5"/><polygon points="14,13 14,19 19,16" fill="#22d3ee"/></svg>',
     };
 
     function fmtNum(n) {
       if (n === undefined || n === null) return '';
       return n.toLocaleString();
+    }
+
+    function fmtSpeed(bps) {
+      if (!bps) return '0 B/s';
+      const u = ['B/s','KB/s','MB/s','GB/s']; let i = 0; let v = bps;
+      while (v >= 1000 && i < u.length - 1) { v /= 1000; i++; }
+      return `${v.toFixed(v >= 10 ? 0 : 1)} ${u[i]}`;
     }
 
     function renderQuickStats(data) {
@@ -689,6 +690,10 @@
         const text = card.dataset.search || '';
         card.classList.toggle('hidden', q && !text.includes(q));
       });
+      document.querySelectorAll('#systemGrid .node-section').forEach(section => {
+        const text = section.dataset.search || '';
+        section.style.display = q && !text.includes(q) ? 'none' : '';
+      });
     }
 
     function renderServices(data) {
@@ -709,6 +714,9 @@
           const items = [];
           if (s.stats.queries !== undefined) items.push(`<div class="stat-item"><span class="stat-label">Queries</span><span class="stat-value">${fmtNum(s.stats.queries)}</span></div>`);
           if (s.stats.blocked !== undefined) items.push(`<div class="stat-item"><span class="stat-label">Blocked</span><span class="stat-value">${fmtNum(s.stats.blocked)}</span>${s.stats.blockedPercent !== undefined ? `<span class="stat-sub">${s.stats.blockedPercent}%</span>` : ''}</div>`);
+          if (s.stats.sessions !== undefined) items.push(`<div class="stat-item"><span class="stat-label">Streaming</span><span class="stat-value">${s.stats.sessions}</span></div>`);
+          if (s.stats.dl_speed !== undefined) items.push(`<div class="stat-item"><span class="stat-label">Download</span><span class="stat-value">${fmtSpeed(s.stats.dl_speed)}</span></div>`);
+          if (s.stats.up_speed !== undefined) items.push(`<div class="stat-item"><span class="stat-label">Upload</span><span class="stat-value">${fmtSpeed(s.stats.up_speed)}</span></div>`);
           if (items.length) statsHtml = `<div class="service-stats">${items.join('')}</div>`;
         }
         return `
@@ -749,12 +757,13 @@
 
       for (const [name, data] of Object.entries(nodes)) {
         if (data.error) {
-          grid.innerHTML += `<div class="node-section"><div class="gauge error-state">${name}: ${data.error}</div></div>`;
+          grid.innerHTML += `<div class="node-section" data-search="${name.toLowerCase()}"><div class="gauge error-state">${name}: ${data.error}</div></div>`;
           continue;
         }
         const temp = data.cpu_temp !== null ? `${data.cpu_temp}°C` : 'N/A';
+        const searchText = `${name} ${data.hostname}`.toLowerCase();
         grid.innerHTML += `
-          <div class="node-section">
+          <div class="node-section" data-search="${searchText}">
             <div class="node-header">
               <span class="node-name">${name}</span>
               <span class="node-hostname">${data.hostname}</span>
